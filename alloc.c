@@ -11,7 +11,6 @@ struct metadata {
 };
 
 void *mymalloc(size_t size) {
-    sbrk(size);
     return NULL;
 }
 
