@@ -43,33 +43,18 @@ check: all
 	@./check.py
 
 docker-update:
-	docker pull $(DOCKERIMG)
+	docker pull --platform=linux/amd64 $(DOCKERIMG)
 
 docker-check: alloc.tar.gz
 	mkdir -p docker_mnt
 	cp $^ docker_mnt/
-	docker run -i -t --rm -v `pwd`/docker_mnt:/submission $(DOCKERIMG) /test
-
-docker-run:
-	docker run -it --rm --read-only -v "`pwd`:/code" -w /code \
-	--name os_$(TARGET) $(DOCKERIMG) /bin/bash
-
-docker-connect:
-# 	If the docker is not running, throw an error
-	@if ! docker container inspect os_$(TARGET) > /dev/null 2>&1; then \
-		echo "\033[0;31mDocker container os_$(TARGET) is not running! Run \"make docker-run\" first in another terminal.\033[0m" && false; \
-	fi
-
-# 	Connect to the docker container
-	docker container exec -it os_$(TARGET) /bin/bash
+	docker run -i -t --platform=linux/amd64 --rm -v `pwd`/docker_mnt:/submission $(DOCKERIMG) /test
 
 clean:
 	rm -f $(LIB)
 	rm -f $(TEST)
 	rm -f *.o test_framework/*.o
 	rm -f *.d test_framework/*.d
-	rm -rf docker_mnt
-	rm -f alloc.tar.gz
 
 $(LIB): $(SOURCES_LIB:.c=.o)
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDFLAGS_LIB)

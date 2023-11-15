@@ -11,6 +11,7 @@ struct metadata {
 };
 
 void *mymalloc(size_t size) {
+    sbrk(size);
     return NULL;
 }
 
@@ -19,6 +20,7 @@ void *mycalloc(size_t nmemb, size_t size) {
 }
 
 void myfree(void *ptr) {
+    
 }
 
 void *myrealloc(void *ptr, size_t size) {
