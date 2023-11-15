@@ -1,0 +1,39 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+struct metadata {
+    size_t size;
+    struct metadata *next;
+    struct metadata *previous;
+    int is_free;
+};
+
+void *mymalloc(size_t size) {
+    return NULL;
+}
+
+void *mycalloc(size_t nmemb, size_t size) {
+    return NULL;
+}
+
+void myfree(void *ptr) {
+}
+
+void *myrealloc(void *ptr, size_t size) {
+    return NULL;
+}
+
+
+/*
+ * Enable the code below to enable system allocator support for your allocator.
+ * Doing so will make debugging much harder (e.g., using printf may result in
+ * infinite loops).
+ */
+// #if 0
+void *malloc(size_t size) { return mymalloc(size); }
+void *calloc(size_t nmemb, size_t size) { return mycalloc(nmemb, size); }
+void *realloc(void *ptr, size_t size) { return myrealloc(ptr, size); }
+void free(void *ptr) { myfree(ptr); }
+//#endif
