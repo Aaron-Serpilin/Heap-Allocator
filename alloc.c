@@ -14,7 +14,7 @@ void *mymalloc(size_t size_in_bytes) {
     
     if (size_in_bytes == 0) return NULL;
 
-    size = (size_in_bytes + sizeof(struct metadata) + sizeof(long) - 1) / sizeof(long) * sizeof(long); // Total size of the memory block, including the metadata and user's data
+    size_t size = (size_in_bytes + sizeof(struct metadata) + sizeof(long) - 1) / sizeof(long) * sizeof(long); // Total size of the memory block, including the metadata and user's data
 
     struct metadata *block = sbrk(0);  // Get the current end of the heap (where the new allocation will occur) without modifying the break value
     void *ptr = sbrk(size); // We increase the program's data space, meaning we allocate memory
@@ -31,11 +31,18 @@ void *mymalloc(size_t size_in_bytes) {
 }
 
 void *mycalloc(size_t nmemb, size_t size) {
-    return NULL;
+    size_t total_size = nmemb * size;
+    void *ptr = mymalloc(total_size);
+
+    if (ptr != NULL) { 
+        memset(ptr, 0, total_size);
+    }
+
+    return ptr;
 }
 
 void myfree(void *ptr) {
-    
+   return NULL;
 }
 
 void *myrealloc(void *ptr, size_t size) {
