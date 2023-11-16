@@ -34,12 +34,17 @@ void *mycalloc(size_t nmemb, size_t size) {
     size_t total_size = nmemb * size;
     void *ptr = mymalloc(total_size);
 
-    if (ptr != NULL) { 
-        memset(ptr, 0, total_size);
+    if (ptr != NULL) {
+        
+        char *byte_ptr = (char *)ptr; // Set memory content to zero
+        for (size_t i = 0; i < total_size; ++i) {
+            byte_ptr[i] = 0;
+        }
     }
 
     return ptr;
 }
+
 
 void myfree(void *ptr) {
    return NULL;
