@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <block_creator.h> // To create the new metadata blocks
+#include <structs.h> // For the metadata struct
 
 struct metadata {
     size_t size;
@@ -35,11 +37,7 @@ void *mycalloc(size_t nmemb, size_t size) {
     void *ptr = mymalloc(total_size);
 
     if (ptr != NULL) {
-        
-        char *byte_ptr = (char *)ptr; // Set memory content to zero
-        for (size_t i = 0; i < total_size; ++i) {
-            byte_ptr[i] = 0;
-        }
+       memset(ptr, 0, total_size);
     }
 
     return ptr;
@@ -47,8 +45,49 @@ void *mycalloc(size_t nmemb, size_t size) {
 
 
 void myfree(void *ptr) {
-   return NULL;
+    if (ptr == NULL) return;  // Do nothing if given a NULL pointer
+
+    // Move the pointer back to the metadata block
+    struct metadata *block = (struct metadata *)ptr - 1;
+
+    // Mark the block as free
+    block->is_free = 1;
+
+    // Merge consecutive free blocks before the current block
+    struct metadata *previous = block->previous;
+    while (previous != NULL && previous->is_free) {
+        previous->size += block->size;
+        previous->next = block->next;
+        if (block->next != NULL) {
+            block->next->previous = previous;
+        }
+        block = previous;  // Update block to the merged block
+        previous = block->previous;
+    }
+
+    // Merge consecutive free blocks after the current block
+    struct metadata *current = block;
+    struct metadata *next = block->next;
+    while (next != NULL && next->is_free) {
+        current->size += next->size;
+        current->next = next->next;
+        if (next->next != NULL) {
+            next->next->previous = current;
+        }
+        next = current->next;
+    }
+
+    // Optional: Release memory if at the end of the heap
+    void *end_of_heap = sbrk(0);
+    void *end_of_block = (void *)((char *)current + current->size);
+
+    if (end_of_block == end_of_heap) {
+        // Release memory if at the end of the heap
+        brk(current);
+    }
 }
+
+
 
 void *myrealloc(void *ptr, size_t size) {
     return NULL;

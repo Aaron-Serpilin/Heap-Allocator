@@ -2,7 +2,7 @@
 ADDITIONAL_SOURCES =
 
 # Add additional .h files here if you added any yourself.
-ADDITIONAL_HEADERS =
+ADDITIONAL_HEADERS = block_creator.h
 
 # -- Do not modify below this point - will get replaced during testing --
 CURDIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
