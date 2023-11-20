@@ -4,32 +4,37 @@
 #include <unistd.h>
 
 struct metadata {
-    size_t size;
-    struct metadata *previous;
+    size_t data_size: 63;
+    struct metadata *next;
     int is_free;
 };
 
-static struct metadata *head = NULL; // Initialization of the beginning of the linked list
+struct free_blocks {
+    struct metadata *next;
+    struct metadata *curent_block;
+};
+
+static struct metadata *head; // Initialization of the beginning of the linked list
+static struct free_blocks *free_list;
 
 void *mymalloc(size_t size_in_bytes) {
+
     if (size_in_bytes == 0) return NULL;
 
     size_t size = (size_in_bytes + sizeof(struct metadata) + sizeof(long) - 1) / sizeof(long) * sizeof(long);
     struct metadata *block = head;
 
     // Traversal of the list of metadata blocks to reuse available blocks
-    while (block != NULL && head == NULL) {
-        if (block->is_free && block->size >= size) {
+    while (block != NULL) {
+
+        if (block->is_free && block->data_size >= size_in_bytes) {
             // Found a free block with enough space, reuse it
             block->is_free = 0;
-            return (void *)(block + 1);
+            return block;
         }
 
-        block = block->previous;
+        block = block->next;
 
-        if (block == head) {
-            break;
-        }
     }
 
     // No free block found or no block with enough space, allocate new memory
@@ -39,15 +44,24 @@ void *mymalloc(size_t size_in_bytes) {
     if (ptr == (void *)-1) return NULL;
 
     // Metadata for the allocated block
-    block->size = size;
-    block->previous = head;
+    block->next = NULL;
     block->is_free = 0;
+    block->data_size = size_in_bytes;
 
-    if (head != NULL) {
-        head->previous = block;
+    // First Iteration
+    if (head == NULL) {
+        head = block;
     }
 
-    head = block;
+    if (head != NULL) {
+
+        struct metadata *current_block = head;
+        while (current_block->next != NULL) {
+            current_block = current_block->next;
+        }
+        current_block->next = block;
+
+    }
 
     return (void *)(block + 1);
 }
@@ -64,41 +78,15 @@ void *mycalloc(size_t nmemb, size_t size) {
 }
 
 void myfree(void *ptr) {
-    if (ptr == NULL) return;
 
-    struct metadata *block = (struct metadata *)ptr - 1;
+    if (ptr == NULL) return;
+    struct metadata *block = ptr - sizeof(struct metadata);
     block->is_free = 1;
 
-    // Coalesce adjacent free blocks
-    while (block != NULL && block->is_free) {
-        struct metadata *next_block = block->previous;
-
-        if (next_block != NULL && next_block->is_free) {
-            // Merge the two adjacent free blocks
-            block->previous = next_block->previous;
-            block->size += next_block->size;
-        } else {
-            // No more adjacent free blocks to merge
-            break;
-        }
-
-        // Update the head pointer only if the merged block reaches the beginning of the list
-        if (block->previous == NULL) {
-            head = block;
-            break;
-        }
-
-        block = block->previous;
-    }
 }
 
-
-
-
-
-
 void *myrealloc(void *ptr, size_t size) {
-   return NULL;
+    return NULL;
 }
 
 // struct metadata* block_creator (struct metadata *previous_block, struct metadata *next_block, int size) {
