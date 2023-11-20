@@ -2,34 +2,54 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <block_creator.h> // To create the new metadata blocks
-#include <structs.h> // For the metadata struct
 
 struct metadata {
     size_t size;
-    struct metadata *next;
     struct metadata *previous;
     int is_free;
 };
 
+static struct metadata *head = NULL; // Initialization of the beginning of the linked list
+
 void *mymalloc(size_t size_in_bytes) {
-    
     if (size_in_bytes == 0) return NULL;
 
-    size_t size = (size_in_bytes + sizeof(struct metadata) + sizeof(long) - 1) / sizeof(long) * sizeof(long); // Total size of the memory block, including the metadata and user's data
+    size_t size = (size_in_bytes + sizeof(struct metadata) + sizeof(long) - 1) / sizeof(long) * sizeof(long);
+    struct metadata *block = head;
 
-    struct metadata *block = sbrk(0);  // Get the current end of the heap (where the new allocation will occur) without modifying the break value
-    void *ptr = sbrk(size); // We increase the program's data space, meaning we allocate memory
+    // Traversal of the list of metadata blocks to reuse available blocks
+    while (block != NULL && head == NULL) {
+        if (block->is_free && block->size >= size) {
+            // Found a free block with enough space, reuse it
+            block->is_free = 0;
+            return (void *)(block + 1);
+        }
 
-    if (ptr == (void *)-1) return NULL; 
+        block = block->previous;
+
+        if (block == head) {
+            break;
+        }
+    }
+
+    // No free block found or no block with enough space, allocate new memory
+    block = sbrk(0);
+    void *ptr = sbrk(size);
+
+    if (ptr == (void *)-1) return NULL;
 
     // Metadata for the allocated block
     block->size = size;
-    block->next = NULL;
-    block->previous = NULL;
+    block->previous = head;
     block->is_free = 0;
 
-    return (void *)(block + 1); // Pointer to the user-accessible memory, skipping metadata
+    if (head != NULL) {
+        head->previous = block;
+    }
+
+    head = block;
+
+    return (void *)(block + 1);
 }
 
 void *mycalloc(size_t nmemb, size_t size) {
@@ -37,61 +57,62 @@ void *mycalloc(size_t nmemb, size_t size) {
     void *ptr = mymalloc(total_size);
 
     if (ptr != NULL) {
-       memset(ptr, 0, total_size);
+        memset(ptr, 0, total_size);
     }
 
     return ptr;
 }
 
-
 void myfree(void *ptr) {
-    if (ptr == NULL) return;  // Do nothing if given a NULL pointer
+    if (ptr == NULL) return;
 
-    // Move the pointer back to the metadata block
     struct metadata *block = (struct metadata *)ptr - 1;
-
-    // Mark the block as free
     block->is_free = 1;
 
-    // Merge consecutive free blocks before the current block
-    struct metadata *previous = block->previous;
-    while (previous != NULL && previous->is_free) {
-        previous->size += block->size;
-        previous->next = block->next;
-        if (block->next != NULL) {
-            block->next->previous = previous;
+    // Coalesce adjacent free blocks
+    while (block != NULL && block->is_free) {
+        struct metadata *next_block = block->previous;
+
+        if (next_block != NULL && next_block->is_free) {
+            // Merge the two adjacent free blocks
+            block->previous = next_block->previous;
+            block->size += next_block->size;
+        } else {
+            // No more adjacent free blocks to merge
+            break;
         }
-        block = previous;  // Update block to the merged block
-        previous = block->previous;
-    }
 
-    // Merge consecutive free blocks after the current block
-    struct metadata *current = block;
-    struct metadata *next = block->next;
-    while (next != NULL && next->is_free) {
-        current->size += next->size;
-        current->next = next->next;
-        if (next->next != NULL) {
-            next->next->previous = current;
+        // Update the head pointer only if the merged block reaches the beginning of the list
+        if (block->previous == NULL) {
+            head = block;
+            break;
         }
-        next = current->next;
-    }
 
-    // Optional: Release memory if at the end of the heap
-    void *end_of_heap = sbrk(0);
-    void *end_of_block = (void *)((char *)current + current->size);
-
-    if (end_of_block == end_of_heap) {
-        // Release memory if at the end of the heap
-        brk(current);
+        block = block->previous;
     }
 }
+
+
+
 
 
 
 void *myrealloc(void *ptr, size_t size) {
-    return NULL;
+   return NULL;
 }
+
+// struct metadata* block_creator (struct metadata *previous_block, struct metadata *next_block, int size) {
+//     struct metadata *new_block = NULL;
+//     new_block = mymalloc(sizeof(struct metadata));
+
+//     new_block->size = size;
+//     new_block->next = next_block;
+//     new_block->previous = previous_block;
+//     new_block->is_free = 1;
+
+//     return new_block;
+
+// };
 
 
 /*

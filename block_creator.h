@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <struct.h>
+#include <structs.h>
 #include <alloc.h>
 
 struct metadata* block_creator (struct metadata *previous_block, struct metadata *next_block, int size) {
