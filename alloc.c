@@ -66,6 +66,7 @@ void *mymalloc (size_t size_in_bytes) {
 }
 
 void *mycalloc(size_t nmemb, size_t size) {
+
     size_t total_size = nmemb * size;
     void *ptr = mymalloc(total_size);
 
@@ -74,17 +75,18 @@ void *mycalloc(size_t nmemb, size_t size) {
     }
 
     return ptr;
+
 }
 
 void myfree(void *ptr) {
-    // if (ptr == NULL) return;
-    // struct metadata *free_block = ptr - sizeof(struct metadata);
-    // free_block->is_free = 1;
-
-    if (!ptr) return;
-    struct metadata *free_block = (struct metadata *)ptr - 1;
+    if (ptr == NULL) return;
+    struct metadata *free_block = ptr - sizeof(struct metadata);
     free_block->is_free = 1;
 
+    // Coalescence of consecutive free blocks
+    if (free_block->next && free_block->next->is_free) {
+        free_block->data_size += free_block->next->data_size + sizeof(struct metadata);
+    }
 
     // struct free_list *current_free_block = free_list;
     
@@ -104,29 +106,10 @@ void myfree(void *ptr) {
     //     current_free_block->next = NULL;
     // }
 
-
-
-    // struct free_list *current_free_block = free_list;
-
-    // if (current_free_block != NULL) {
-    //     while (current_free_block->next != NULL) {
-    //         current_free_block = current_free_block->next;
-    //         printf("The block is free if this is 1: %d\n", current_free_block->current->is_free);
-    //     }
-    //     current_free_block->next = malloc(sizeof(struct free_list));  // Allocate a new node
-    //     current_free_block = current_free_block->next;
-    //     current_free_block->current = free_block;
-    //     current_free_block->next = NULL;
-    // } else {
-    //     free_list = malloc(sizeof(struct free_list));  // Allocate the first node
-    //     free_list->current = free_block;
-    //     free_list->next = NULL;
-    // }
-
 }
 
 void *myrealloc(void *ptr, size_t new_size) {
-    
+
     if (ptr == NULL) {
         return mymalloc(new_size);
     }
