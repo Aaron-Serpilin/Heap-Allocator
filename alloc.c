@@ -35,24 +35,26 @@ struct metadata {
 static struct metadata *head;
 static struct metadata *free_list;
 
-void *mymalloc (size_t size_in_bytes) {
+void *mymalloc (size_t size) {
 
-    if (size_in_bytes == 0) return NULL;
+    if (size == 0) return NULL;
 
-    size_t size = (size_in_bytes + sizeof(struct metadata) + sizeof(long) - 1) / sizeof(long) * sizeof(long);
+    if (size % 8 != 0) {
+        size = size + (8 - size % 8);
+    } 
+
     struct metadata *block = head;
     //struct metadata *free_block = free_list;
 
     // Traversal of the list of metadata blocks to reuse available blocks
     while (block != NULL) {
 
-        if (block->is_free && block->data_size >= size_in_bytes) {  // Found a free block with enough space, reuse it
+        if (block->is_free && block->data_size >= size) {  // Found a free block with enough space, reuse it
             //split_block(block, size_in_bytes);
             block->is_free = 0;
             return (void *)(block + 1); // Return the pointer to the next available block
         }
 
-        //block = nextBlock(block);
         block = block->next;
 
     }
@@ -70,14 +72,14 @@ void *mymalloc (size_t size_in_bytes) {
 
     // No free block found or no block with enough space, allocate new memory
     block = sbrk(0);
-    void *ptr = sbrk(size);
+    void *ptr = sbrk(size + sizeof(struct metadata));
 
     if (ptr == (void *)-1) return NULL;
 
     // Metadata for the allocated block
     block->next = NULL;
     block->is_free = 0;
-    block->data_size = size_in_bytes;
+    block->data_size = size;
 
     if (head != NULL) {
 
