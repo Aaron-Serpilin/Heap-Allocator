@@ -3,13 +3,13 @@
 #include <string.h>
 #include <unistd.h>
 
-#define nextBlock(currentBlock) ((struct metadata *)((char *)(currentBlock + 1) + currentBlock->data_size))
-#define alignSize(size) ((size + sizeof(long) - 1) & ~(sizeof(long) - 1))
-
 struct metadata {
     size_t data_size: 63;
-    int is_free;
+    unsigned long is_free: 1;
 };
+
+int availableBlocks = 0;
+static struct metadata *head;
 
 void split_block (struct metadata *block, size_t size) {
 
@@ -17,11 +17,33 @@ void split_block (struct metadata *block, size_t size) {
     new_block->data_size = block->data_size - size - sizeof(struct metadata);
     new_block->is_free = 1;
     block->data_size = size;
+    availableBlocks += 1;
 
 }
 
-static struct metadata *head;
-//static struct metadata *free_list;
+struct metadata* nextBlock (struct metadata *currentBlock) {
+    return (struct metadata *)((char *)(currentBlock + 1) + currentBlock->data_size);
+}
+
+void mergeBlocks (struct metadata *current_block) {
+    
+     while ((void *)current_block < sbrk(0)) {
+        
+        struct metadata *next_block = nextBlock(current_block);
+
+        if (current_block->is_free && next_block->is_free && (void *)next_block < sbrk(0)) {
+            current_block->data_size += next_block->data_size + sizeof(struct metadata);
+            availableBlocks -= 1;
+        } else {
+            current_block = next_block;
+        }
+ 
+    }
+}
+
+size_t alignSize (size_t size) {
+    return (size + sizeof(long) - 1) & ~(sizeof(long) - 1);
+}
 
 void *mymalloc (size_t size) {
 
@@ -31,19 +53,21 @@ void *mymalloc (size_t size) {
 
     struct metadata *block = head;
 
-    // Traversal of the list of metadata blocks to reuse available blocks
-    while (block && ((void *)block < sbrk(0))) {
+    if (availableBlocks > 0) {
+        // Traversal of the list of metadata blocks to reuse available blocks 
+        while (block && ((void *)block < sbrk(0))) {
 
-        if (block->is_free && block->data_size >= size) {  // Found a free block with enough space, reuse it
-            split_block(block, size);
-            block->is_free = 0;
-            return (void *)(block + 1); // Return the pointer to the next available block
+            if (block->is_free && block->data_size >= size) {  // Found a free block with enough space, reuse it
+                split_block(block, size);
+                block->is_free = 0;
+                availableBlocks -= 1;
+                return (void *)(block + 1); // Return the pointer to the next available block
+            }
+
+            block = nextBlock(block);
         }
-
-        block = nextBlock(block);
-
     }
-
+    
     // No free block found or no block with enough space, allocate new memory
     block = sbrk(0);
     void *ptr = sbrk(size + sizeof(struct metadata));
@@ -64,7 +88,7 @@ void *mymalloc (size_t size) {
 
 void *mycalloc(size_t nmemb, size_t size) {
 
-    size_t total_size = nmemb * size;
+    size_t total_size = alignSize(nmemb * size);
     void *ptr = mymalloc(total_size);
 
     if (ptr != NULL) {
@@ -72,27 +96,18 @@ void *mycalloc(size_t nmemb, size_t size) {
     }
 
     return ptr;
-
 }
 
 void myfree(void *ptr) {
+
     if (ptr == NULL) return;
     struct metadata *free_block = ptr - sizeof(struct metadata);
     free_block->is_free = 1;
+    availableBlocks += 1;
 
     // Coalescence of free blocks
     struct metadata *current_block = head;
-    while ((void *)current_block < sbrk(0)) {
-        
-        struct metadata *next_block = nextBlock(current_block);
-
-        if (current_block->is_free && next_block->is_free && (void *)next_block < sbrk(0)) {
-            current_block->data_size += next_block->data_size + sizeof(struct metadata);
-        } else {
-            current_block = next_block;
-        }
- 
-    }
+    mergeBlocks(current_block);
 
 }
 
