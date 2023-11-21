@@ -17,7 +17,7 @@ struct free_blocks {
 static struct metadata *head; // Initialization of the beginning of the linked list
 static struct free_blocks *free_list;
 
-void *mymalloc(size_t size_in_bytes) {
+void *mymalloc (size_t size_in_bytes) {
 
     if (size_in_bytes == 0) return NULL;
 
@@ -48,11 +48,6 @@ void *mymalloc(size_t size_in_bytes) {
     block->is_free = 0;
     block->data_size = size_in_bytes;
 
-    // First Iteration
-    if (head == NULL) {
-        head = block;
-    }
-
     if (head != NULL) {
 
         struct metadata *current_block = head;
@@ -61,6 +56,11 @@ void *mymalloc(size_t size_in_bytes) {
         }
         current_block->next = block;
 
+    }
+
+    // First Iteration
+    if (head == NULL) {
+        head = block;
     }
 
     return (void *)(block + 1);
@@ -78,12 +78,26 @@ void *mycalloc(size_t nmemb, size_t size) {
 }
 
 void myfree(void *ptr) {
-
     if (ptr == NULL) return;
-    struct metadata *block = ptr - sizeof(struct metadata);
-    block->is_free = 1;
 
+    struct metadata *free_block = ptr - sizeof(struct metadata);
+    free_block->is_free = 1;
+    free_block->next = NULL;  
+
+    
+    if (free_list == NULL) {
+        free_list = free_block;
+    } else {
+        struct metadata *current_block = free_list;
+
+        while (current_block->next != NULL) { // We iterate until the end of the linked list
+            current_block = current_block->next;
+        }
+
+        current_block->next = free_block; // We add the new free block each time we invoke this function
+    }
 }
+
 
 void *myrealloc(void *ptr, size_t size) {
     return NULL;
