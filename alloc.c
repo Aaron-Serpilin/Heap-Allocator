@@ -103,20 +103,6 @@ void *myrealloc(void *ptr, size_t size) {
     return NULL;
 }
 
-// struct metadata* block_creator (struct metadata *previous_block, struct metadata *next_block, int size) {
-//     struct metadata *new_block = NULL;
-//     new_block = mymalloc(sizeof(struct metadata));
-
-//     new_block->size = size;
-//     new_block->next = next_block;
-//     new_block->previous = previous_block;
-//     new_block->is_free = 1;
-
-//     return new_block;
-
-// };
-
-
 /*
  * Enable the code below to enable system allocator support for your allocator.
  * Doing so will make debugging much harder (e.g., using printf may result in
