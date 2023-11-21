@@ -9,13 +9,13 @@ struct metadata {
     int is_free;
 };
 
-struct free_blocks {
-    struct metadata *next;
-    struct metadata *curent_block;
-};
+// struct free_list {
+//     struct metadata *current;
+//     struct metadata *next;
+// };
 
-static struct metadata *head; // Initialization of the beginning of the linked list
-static struct free_blocks *free_list;
+static struct metadata *head;
+//static struct free_list *free_list;
 
 void *mymalloc (size_t size_in_bytes) {
 
@@ -27,10 +27,9 @@ void *mymalloc (size_t size_in_bytes) {
     // Traversal of the list of metadata blocks to reuse available blocks
     while (block != NULL) {
 
-        if (block->is_free && block->data_size >= size_in_bytes) {
-            // Found a free block with enough space, reuse it
+        if (block->is_free && block->data_size >= size_in_bytes) {  // Found a free block with enough space, reuse it
             block->is_free = 0;
-            return block;
+            return (void *)(block + 1); // Return the pointer to the next available block
         }
 
         block = block->next;
@@ -78,29 +77,81 @@ void *mycalloc(size_t nmemb, size_t size) {
 }
 
 void myfree(void *ptr) {
-    if (ptr == NULL) return;
+    // if (ptr == NULL) return;
+    // struct metadata *free_block = ptr - sizeof(struct metadata);
+    // free_block->is_free = 1;
 
-    struct metadata *free_block = ptr - sizeof(struct metadata);
+    if (!ptr) return;
+    struct metadata *free_block = (struct metadata *)ptr - 1;
     free_block->is_free = 1;
-    free_block->next = NULL;  
 
+
+    // struct free_list *current_free_block = free_list;
     
-    if (free_list == NULL) {
-        free_list = free_block;
-    } else {
-        struct metadata *current_block = free_list;
+    // if (current_free_block  != NULL) {
+        
+    //     while (current_free_block->next != NULL) {
+    //         current_free_block  = current_free_block ->next;
+    //         //printf("The block is free if this is 1: %d\n", current_free_block->current->is_free);
+    //     }
 
-        while (current_block->next != NULL) { // We iterate until the end of the linked list
-            current_block = current_block->next;
-        }
+    //     current_free_block->next = free_block;
 
-        current_block->next = free_block; // We add the new free block each time we invoke this function
-    }
+    // }
+
+    // if (current_free_block == NULL) {
+    //     current_free_block->current = free_block;
+    //     current_free_block->next = NULL;
+    // }
+
+
+
+    // struct free_list *current_free_block = free_list;
+
+    // if (current_free_block != NULL) {
+    //     while (current_free_block->next != NULL) {
+    //         current_free_block = current_free_block->next;
+    //         printf("The block is free if this is 1: %d\n", current_free_block->current->is_free);
+    //     }
+    //     current_free_block->next = malloc(sizeof(struct free_list));  // Allocate a new node
+    //     current_free_block = current_free_block->next;
+    //     current_free_block->current = free_block;
+    //     current_free_block->next = NULL;
+    // } else {
+    //     free_list = malloc(sizeof(struct free_list));  // Allocate the first node
+    //     free_list->current = free_block;
+    //     free_list->next = NULL;
+    // }
+
 }
 
+void *myrealloc(void *ptr, size_t new_size) {
+    
+    if (ptr == NULL) {
+        return mymalloc(new_size);
+    }
 
-void *myrealloc(void *ptr, size_t size) {
-    return NULL;
+    if (new_size == 0) {
+        myfree(ptr);
+        return NULL;
+    }
+
+    size_t total_size = sizeof(struct metadata) + new_size;
+    total_size = (total_size + sizeof(long) - 1) & ~(sizeof(long) - 1);
+
+    struct metadata *metadata = ptr - sizeof(struct metadata);
+
+    if (metadata->data_size >= new_size) {
+
+        return ptr;
+
+    } else {
+
+        void *new_ptr = mymalloc(new_size);
+        memcpy(new_ptr, ptr, metadata->data_size);
+        myfree(ptr);
+        return new_ptr;
+    }
 }
 
 /*
@@ -108,9 +159,9 @@ void *myrealloc(void *ptr, size_t size) {
  * Doing so will make debugging much harder (e.g., using printf may result in
  * infinite loops).
  */
-// #if 0
+ #if 1
 void *malloc(size_t size) { return mymalloc(size); }
 void *calloc(size_t nmemb, size_t size) { return mycalloc(nmemb, size); }
 void *realloc(void *ptr, size_t size) { return myrealloc(ptr, size); }
 void free(void *ptr) { myfree(ptr); }
-//#endif
+#endif
