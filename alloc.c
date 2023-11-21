@@ -11,26 +11,16 @@ struct metadata {
     int is_free;
 };
 
-// void split_block (struct metadata *block, size_t size) {
+void split_block (struct metadata *block, size_t size) {
 
-//     int32_t remaining_size = block->data_size - size;
-    
-//     if (remaining_size >= 0) {
+    struct metadata *new_block = (struct metadata *)((char *)(block + 1) + size);
+    new_block->next = block->next;
+    new_block->is_free = 1;
+    new_block->data_size = block->data_size - size - sizeof(struct metadata);
+    block->next = new_block;
+    block->data_size = size;
 
-//         struct metadata *new_block = (struct metadata *)((char *)block + size + sizeof(struct metadata));
-//         new_block->next = block->next;
-//         new_block->is_free = 1;
-//         new_block->data_size = remaining_size;
-//         block->next = new_block;
-//         block->data_size = size;
-
-//     }
-
-// }
-
-// struct metadata *nextBlock(struct metadata *currentBlock) {
-//     return (struct metadata *)((char *)(currentBlock + 1) + currentBlock->data_size);
-// }
+}
 
 static struct metadata *head;
 static struct metadata *free_list;
@@ -50,8 +40,8 @@ void *mymalloc (size_t size) {
     while (block != NULL) {
 
         if (block->is_free && block->data_size >= size) {  // Found a free block with enough space, reuse it
-            //split_block(block, size_in_bytes);
             block->is_free = 0;
+            //split_block(block, size);
             return (void *)(block + 1); // Return the pointer to the next available block
         }
 
@@ -61,7 +51,7 @@ void *mymalloc (size_t size) {
 
     // while (free_block != NULL) {
 
-    //     if (free_block->is_free && free_block->data_size >= size_in_bytes) {
+    //     if (free_block->is_free && free_block->data_size >= size) {
     //         free_block->is_free = 0;
     //         return (void *)(free_block + 1);
     //     }
