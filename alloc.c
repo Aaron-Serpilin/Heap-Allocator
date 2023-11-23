@@ -5,7 +5,7 @@
 
 struct metadata {
     size_t data_size: 63;
-    unsigned long is_free: 1;
+    int is_free: 1;
 };
 
 int availableBlocks = 0;
@@ -26,8 +26,8 @@ struct metadata* nextBlock (struct metadata *currentBlock) {
 }
 
 void mergeBlocks (struct metadata *current_block) {
-    
-     while ((void *)current_block < sbrk(0)) {
+    // Coalescence of free blocks
+    while ((void *)current_block < sbrk(0)) {
         
         struct metadata *next_block = nextBlock(current_block);
 
@@ -48,9 +48,7 @@ size_t alignSize (size_t size) {
 void *mymalloc (size_t size) {
 
     if (size == 0) return NULL;
-
     size = alignSize(size);
-
     struct metadata *block = head;
 
     if (availableBlocks > 0) {
@@ -74,7 +72,6 @@ void *mymalloc (size_t size) {
 
     if (ptr == (void *)-1) return NULL;
 
-    // Metadata for the allocated block
     block->is_free = 0;
     block->data_size = size;
 
@@ -104,10 +101,7 @@ void myfree(void *ptr) {
     struct metadata *free_block = ptr - sizeof(struct metadata);
     free_block->is_free = 1;
     availableBlocks += 1;
-
-    // Coalescence of free blocks
-    struct metadata *current_block = head;
-    mergeBlocks(current_block);
+    mergeBlocks(head);
 
 }
 
@@ -122,13 +116,12 @@ void *myrealloc(void *ptr, size_t new_size) {
         return NULL;
     }
 
-    size_t total_size = sizeof(struct metadata) + new_size;
-    total_size = (total_size + sizeof(long) - 1) & ~(sizeof(long) - 1);
-
     struct metadata *metadata = ptr - sizeof(struct metadata);
 
     if (metadata->data_size >= new_size) {
+
         return ptr;
+
     } else {
 
         void *new_ptr = mymalloc(new_size);
